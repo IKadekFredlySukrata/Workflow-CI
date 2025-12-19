@@ -11,6 +11,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 mlflow.set_tracking_uri(f"file://{os.path.join(current_dir, 'mlruns')}")
 
 mlflow.sklearn.autolog() # type: ignore
+mlflow.pyfunc.log_model("model_pyfunc", python_model=model)
 
 # Load data
 dataset_path = "wine_preprocessing.csv"
