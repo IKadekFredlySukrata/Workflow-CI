@@ -22,13 +22,16 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: Install MLflow
-      run: pip install mlflow
+    - name: Install dependencies (from conda.yaml or manually)
+      run: |
+        python -m pip install --upgrade pip
+        pip install mlflow scikit-learn pandas imbalanced-learn  # Add all your deps here
+        # If you have requirements.txt, use: pip install -r requirements.txt
 
-    - name: Run MLflow Project
+    - name: Run MLflow Project (no conda)
       run: |
         cd MLProject
-        mlflow run .  # Ini kunci! Jalankan project dari folder MLProject
+        mlflow run . --no-conda   # ← This bypasses conda activation entirely
 
     - name: Upload MLflow artifacts
       uses: actions/upload-artifact@v4
