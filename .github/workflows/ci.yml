@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: write   # For committing artifacts back (Advance)
+  contents: write
 
 jobs:
   train:
@@ -17,41 +17,34 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Setup Miniconda
-      uses: conda-incubator/setup-miniconda@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
       with:
         python-version: '3.12'
-        environment-file: MLProject/conda.yaml   # Path to your conda.yaml
-        activate-environment: mlflow-env
-        auto-activate-base: false
-        miniforge-variant: Mambaforge   # Faster than regular Conda
 
-    - name: Install MLflow (if not in conda.yaml)
-      shell: bash -l {0}   # Important: login shell to load Conda
+    - name: Install dependencies (from conda.yaml or manually)
       run: |
-        conda info
-        conda list
+        python -m pip install --upgrade pip
+        pip install mlflow scikit-learn pandas imbalanced-learn  # Add all your deps here
+        # If you have requirements.txt, use: pip install -r requirements.txt
 
-    - name: Run MLflow Project
-      shell: bash -l {0}   # Ensures Conda env is activated
+    - name: Run MLflow Project (no conda)
       run: |
         cd MLProject
-        mlflow run .   # This will use the activated Conda env from conda.yaml
+        mlflow run .
 
     - name: Upload MLflow artifacts
       uses: actions/upload-artifact@v4
       with:
         name: mlruns
         path: MLProject/mlruns/
-        if-no-files-found: warn
 
-    # Optional: Commit artifacts back to repo (for Advance proof)
-    - name: Commit and push MLflow artifacts
-      shell: bash -l {0}
+    # Optional: Commit artifacts back
+    - name: Commit artifacts to repo
       run: |
         cd MLProject
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add mlruns/
-        git diff --staged --quiet || git commit -m "Update MLflow artifacts from CI run [skip ci]"
-        git push origin main || echo "No changes to push"
+        git diff --staged --quiet || git commit -m "Update MLflow artifacts from CI [skip ci]"
+        git push
