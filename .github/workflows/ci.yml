@@ -1,4 +1,8 @@
-name: CI - MLflow Project Training
+name: CI - Retrain Model
+
+permissions:
+  contents: write
+  actions: read
 
 on:
   push:
@@ -6,52 +10,47 @@ on:
   pull_request:
     branches: [ main ]
 
-permissions:
-  contents: write   # For committing artifacts back
-
 jobs:
-  train:
+  train-model:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Setup Miniconda
-      uses: conda-incubator/setup-miniconda@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
       with:
         python-version: '3.12'
-        environment-file: MLProject/conda.yaml
-        activate-environment: wine_ml_env
-        auto-activate-base: false
-        miniforge-variant: Miniforge3   # ← Fixed: use Miniforge3 instead of Mambaforge
-        miniforge-version: latest
 
-    - name: Verify environment
-      shell: bash -l {0}
+    - name: Install dependencies
       run: |
-        conda info -a
-        conda list
+        python -m pip install --upgrade pip
+        pip install mlflow scikit-learn pandas imbalanced-learn
 
-    - name: Run MLflow Project
-      shell: bash -l {0}
+    - name: Run training
       run: |
         cd MLProject
-        mlflow run .   # ← This is exactly what the reviewer asked for
+        mlflow run .
 
-    - name: Upload MLflow artifacts (for proof)
+    - name: Upload MLflow artifacts
       uses: actions/upload-artifact@v4
       with:
         name: mlruns
         path: MLProject/mlruns/
         if-no-files-found: warn
-
-    - name: Commit and push MLflow artifacts back to repo
-      shell: bash -l {0}
+    
+    - name: Commit and push MLflow artifacts to repo
       run: |
         cd MLProject
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        
+        # Add mlruns folder (or just the latest model to keep repo small)
         git add mlruns/
-        git diff --staged --quiet || git commit -m "Update MLflow artifacts from CI run [skip ci]"
-        git push origin main || echo "No changes to push"
+        
+        # Commit only if there are changes
+        git diff --quiet && git diff --staged --quiet || git commit -m "Update MLflow artifacts from CI run"
+        
+        # Push to main (safe because it's the same branch)
+        git push origin main
