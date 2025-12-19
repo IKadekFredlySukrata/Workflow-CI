@@ -7,5 +7,5 @@ dependencies:
   - pip:
       - pandas
       - scikit-learn
-      - mlflow
+      - mlflow=2.19
       - imbalanced-learn
