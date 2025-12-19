@@ -1,4 +1,4 @@
-name: CI - MLflow Project Training
+name: CI - MLflow Project Training & Docker Build
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: write  # Untuk commit artifact kalau mau
+  contents: write
 
 jobs:
   train:
@@ -17,18 +17,20 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Setup Miniconda
+      uses: conda-incubator/setup-miniconda@v3
       with:
         python-version: '3.12'
-
-    - name: Install MLflow
-      run: pip install mlflow
+        environment-file: MLProject/conda.yaml
+        activate-environment: wine_ml_env
+        auto-activate-base: false
+        miniforge-variant: Mambaforge
 
     - name: Run MLflow Project
+      shell: bash -l {0}
       run: |
         cd MLProject
-        mlflow run .  # Ini kunci! Jalankan project dari folder MLProject
+        mlflow run .   # Ini yang diminta reviewer
 
     - name: Upload MLflow artifacts
       uses: actions/upload-artifact@v4
@@ -36,12 +38,13 @@ jobs:
         name: mlruns
         path: MLProject/mlruns/
 
-    # Optional: Commit artifact kembali ke repo (untuk Advance)
+    # Advance: Commit artifacts back
     - name: Commit artifacts to repo
+      shell: bash -l {0}
       run: |
         cd MLProject
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add mlruns/
         git diff --staged --quiet || git commit -m "Update MLflow artifacts from CI [skip ci]"
-        git push
+        git push || echo "No changes"
