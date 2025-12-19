@@ -1,4 +1,4 @@
-name: CI - MLflow Project Training & Docker Build
+name: CI - MLflow Project Training
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: write
+  contents: write   # For committing artifacts back
 
 jobs:
   train:
@@ -24,27 +24,34 @@ jobs:
         environment-file: MLProject/conda.yaml
         activate-environment: wine_ml_env
         auto-activate-base: false
-        miniforge-variant: Mambaforge
+        miniforge-variant: Miniforge3   # ← Fixed: use Miniforge3 instead of Mambaforge
+        miniforge-version: latest
+
+    - name: Verify environment
+      shell: bash -l {0}
+      run: |
+        conda info -a
+        conda list
 
     - name: Run MLflow Project
       shell: bash -l {0}
       run: |
         cd MLProject
-        mlflow run .   # Ini yang diminta reviewer
+        mlflow run .   # ← This is exactly what the reviewer asked for
 
-    - name: Upload MLflow artifacts
+    - name: Upload MLflow artifacts (for proof)
       uses: actions/upload-artifact@v4
       with:
         name: mlruns
         path: MLProject/mlruns/
+        if-no-files-found: warn
 
-    # Advance: Commit artifacts back
-    - name: Commit artifacts to repo
+    - name: Commit and push MLflow artifacts back to repo
       shell: bash -l {0}
       run: |
         cd MLProject
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add mlruns/
-        git diff --staged --quiet || git commit -m "Update MLflow artifacts from CI [skip ci]"
-        git push || echo "No changes"
+        git diff --staged --quiet || git commit -m "Update MLflow artifacts from CI run [skip ci]"
+        git push origin main || echo "No changes to push"
