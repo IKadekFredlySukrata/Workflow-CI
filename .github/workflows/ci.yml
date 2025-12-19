@@ -52,26 +52,33 @@ jobs:
         
         git push origin main
     
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Get latest run ID from MLflow
+    - name: Get latest run ID
       id: get_run
       run: |
         cd MLProject
-        # Ambil run ID terbaru dari experiment
-        RUN_ID=$(mlflow runs list --experiment-name "Wine_Classification_Experiment" --max-results 1 | tail -n +2 | awk '{print $1}')
-        echo "Latest Run ID: $RUN_ID"
-        echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+        python - <<EOF
+        import mlflow
+        client = mlflow.MlflowClient()
+        exp = client.get_experiment_by_name("Wine_Classification_Experiment")
+        runs = client.search_runs(exp.experiment_id, max_results=1, order_by=["start_time DESC"])
+        run_id = runs[0].info.run_id
+        print(run_id)
+        with open("$GITHUB_OUTPUT", "a") as f:
+          f.write(f"run_id={run_id}\n")
+        EOF
 
-    - name: Build and push Docker image for serving model
+    - name: Build and push Docker image
       run: |
         cd MLProject
-        mlflow models build-docker \
-          --model-uri "runs:/${{ steps.get_run.outputs.run_id }}/model" \
-          --name "wine-model-server"
+        mlflow models build-docker -m "runs:/${{ steps.get_run.outputs.run_id }}/model" -n "wine-model-server" --enable-mlserver
         docker tag wine-model-server ${{ secrets.DOCKERHUB_USERNAME }}/wine-model-server:latest
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/wine-model-server:latest
