@@ -1,5 +1,9 @@
 name: CI - Retrain Model
 
+permissions:
+  contents: write
+  actions: read
+
 on:
   push:
     branches: [ main ]
@@ -35,3 +39,15 @@ jobs:
         name: mlruns
         path: MLProject/mlruns/
         if-no-files-found: warn
+
+    - name: Commit and push MLflow artifacts to repo
+      run: |
+        cd MLProject
+        git config --global user.name "IKadekFredlySukrata"
+        git config --global user.email "fredlysukrata@gmail.com"
+        
+        git add mlruns/
+        
+        git diff --quiet && git diff --staged --quiet || git commit -m "Update MLflow artifacts from CI run"
+        
+        git push origin main
