@@ -1,14 +1,13 @@
 name: CI - Retrain Model
 
-permissions:
-  contents: write
-  actions: read
-
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+
+permissions:
+  contents: write
 
 jobs:
   train-model:
@@ -28,10 +27,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install mlflow scikit-learn pandas imbalanced-learn
 
-    - name: Run training
+    - name: Run MLflow Project (no conda)
       run: |
         cd MLProject
-        mlflow run .
+        mlflow run . --no-conda   # ← This bypasses Conda entirely
 
     - name: Upload MLflow artifacts
       uses: actions/upload-artifact@v4
@@ -39,18 +38,12 @@ jobs:
         name: mlruns
         path: MLProject/mlruns/
         if-no-files-found: warn
-    
+
     - name: Commit and push MLflow artifacts to repo
       run: |
         cd MLProject
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        
-        # Add mlruns folder (or just the latest model to keep repo small)
         git add mlruns/
-        
-        # Commit only if there are changes
-        git diff --quiet && git diff --staged --quiet || git commit -m "Update MLflow artifacts from CI run"
-        
-        # Push to main (safe because it's the same branch)
-        git push origin main
+        git diff --staged --quiet || git commit -m "Update MLflow artifacts from CI run [skip ci]"
+        git push origin main || echo "Nothing to push"
